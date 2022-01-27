@@ -1,4 +1,4 @@
-# импорт библиотек
+# import libraries
 import configparser
 import json
 import pandas as pd
@@ -26,36 +26,36 @@ while True:
 from telethon.sync import TelegramClient
 from telethon import connection
 
-# для корректного переноса времени сообщений в json
+# to correctly transfer message times to json
 from datetime import date, datetime
 
-# классы для работы с каналами
+# classes for working with channels
 from telethon.tl.functions.channels import GetParticipantsRequest
 from telethon.tl.types import ChannelParticipantsSearch
 
-# класс для работы с сообщениями
+# class for working with messages
 from telethon.tl.functions.messages import GetHistoryRequest
 
-# Считываем учетные данные
+# Read credentials
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-# Присваиваем значения внутренним переменным
+# Assign values to internal variables
 api_id = config['Telegram']['api_id']
 api_hash = config['Telegram']['api_hash']
 username = config['Telegram']['username']
 
-# создание объекта клиента Telegram
+# create a Telegram client object
 client = TelegramClient(username, api_id, api_hash)
 
 client.start()
 
 async def dump_all_participants(channel):
-	"""Записывает json-файл с информацией о всех участниках канала/чата"""
-	offset_user = 0    # номер участника, с которого начинается считывание
-	limit_user = 100   # максимальное число записей, передаваемых за один раз
+	"""Writes a json file with information about all channel/chat members"""
+	offset_user = 0    # member number from which reading starts
+	limit_user = 100   # maximum number of records transferred at one time
 
-	all_participants = []   # список всех участников канала
+	all_participants = []   # list of all channel members
 	filter_user = ChannelParticipantsSearch('')
 
 	while True:
@@ -67,16 +67,16 @@ async def dump_all_participants(channel):
 		offset_user += len(participants.users)
 
 async def dump_all_messages(channel, short_url_, datetime_):
-	"""Записывает json-файл с информацией о всех сообщениях канала/чата"""
-	offset_msg = 0    # номер записи, с которой начинается считывание
-	limit_msg = 100   # максимальное число записей, передаваемых за один раз
+	"""Writes a json file with information about all channel/chat messages"""
+	offset_msg = 0    # record number from which to start reading
+	limit_msg = 100   # maximum number of records transferred at one time
 
-	all_messages = []   # список всех сообщений
+	all_messages = []   # list of all messages
 	total_messages = 0
-	total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
+	total_count_limit = 0  # change this value if you don't need all messages
     
 	class DateTimeEncoder(json.JSONEncoder):
-		'''Класс для сериализации записи дат в JSON'''
+		'''Class for serializing date records to JSON'''
 		def default(self, o):
 			if isinstance(o, datetime):
 				return o.isoformat()
@@ -110,42 +110,42 @@ async def main():
 	#await dump_all_participants(channel)
 	await dump_all_messages(channel, channel_string, datetime_string)
 
-# загрузка необходимых компонентов
+# downloading required components
 nltk.download('wordnet')
 nltk.download('punkt')
 
-# очистка консоли от лишней информации
+# clearing the console of unnecessary information
 cls = lambda: os.system('cls')
 cls()
 
-# парсинг чата или канала в Telegram и сохранение в JSON-файл
-url = 't.me/' + input("Введите ссылку на канал или чат: @")
+# parsing a chat or channel in Telegram and saving to a JSON file
+url = 't.me/' + input("Enter a link to a channel or chat: @")
 #url = 't.me/testflight_app'
 channel_string = url.split('/')[-1]
-print(f'{str(datetime.now())} | Парсинг начат')
+print(f'{str(datetime.now())} | Parsing started')
 datetime_string = str(datetime.now()).replace("-", "").replace(" ", "T").replace(":", "").split(".")[0]
 with client:
 	client.loop.run_until_complete(main())
-print(f'{str(datetime.now())} | Парсинг закончен!')
+print(f'{str(datetime.now())} | Parsing finished!')
 
-# копирование содержимого JSON-файла в CSV-файл
-print(f'{str(datetime.now())} | Начато копирование содержимого JSON-файла в CSV-файл')
+# copying JSON file content to CSV file
+print(f'{str(datetime.now())} | Started copying JSON file content to CSV file')
 json_file = pd.read_json(f'{channel_string}_messages_{datetime_string}.json')
 json_file.to_csv(f'{channel_string}_messages_{datetime_string}.csv', index = None, encoding = 'utf8')
-print(f'{str(datetime.now())} | Копирование содержимого JSON-файла в CSV-файл завершено!')
+print(f'{str(datetime.now())} | Copying the contents of the JSON file to the CSV file is complete!')
 
-# импорт содержимого JSON-файла в базу данных
+# importing json file content into database
 #mongoimport_path = '"C:\\Program Files\\MongoDB\\Server\\4.4\\bin\\mongodb-database-tools-windows-x86_64-100.3.1\\bin\\mongoimport.exe"'
 #os.popen(f'{mongoimport_path} -d KM5_BigData -c {channel_string}_{datetime_string} --file {channel_string}_messages_{datetime_string}.json --jsonArray')
-print(f'{str(datetime.now())} | Начат импорт содержимого JSON-файла в базу данных')
+print(f'{str(datetime.now())} | Started importing JSON file content into database')
 db_original = MongoClient('mongodb://127.0.0.1:27017')['KM5_BigData'][f'{channel_string}_{datetime_string}']
 with open(f'{channel_string}_messages_{datetime_string}.json', 'r', encoding='utf8') as json_file:
     json_file_data = json.load(json_file)
 db_original.insert_many(json_file_data)
-print(f'{str(datetime.now())} | Импорт содержимого JSON-файла в базу данных завершен!')
+print(f'{str(datetime.now())} | The import of JSON file content into the database is complete!')
 
-# удаление лишних столбцов в базе данных
-print(f'{str(datetime.now())} | Начато удаление лишних столбцов в базе данных')
+# deleting extra columns in the database
+print(f'{str(datetime.now())} | Started deleting extra columns in the database')
 db_original.update_many({}, {'$unset': {'_': '', 
 										'out': '', 
 										'mentioned': '', 
@@ -167,10 +167,10 @@ db_original.update_many({}, {'$unset': {'_': '',
 										'restriction_reason': '', 
 										'ttl_period': '', 
 										'action': ''}})
-print(f'{str(datetime.now())} | Удаление лишних столбцов в базе данных завершено!')
+print(f'{str(datetime.now())} | Removing extra columns in the database is complete!')
 
 # леммирование текста
-print(f'{str(datetime.now())} | Леммирование текста')
+print(f'{str(datetime.now())} | Text lemming')
 morph = pymorphy2.MorphAnalyzer()
 data = []
 with open(f'{channel_string}_messages_{datetime_string}.csv', 'r', encoding='utf-8', newline='') as csvfile:
@@ -187,19 +187,19 @@ for i in range(len(text_to_lemm)):
     lemm_text_list.append(lemm_text)
 for i in range(len(lemm_text_list)):
 	data[i]['message'] = lemm_text_list[i]
-print(f'{str(datetime.now())} | Леммирование текста завершено!')
+print(f'{str(datetime.now())} | Text lemming completed!')
 
-# запись леммированного текста в CSV-файл
-print(f'{str(datetime.now())} | Запись леммированного текста в CSV-файл')
+# write lemmed text to CSV file
+print(f'{str(datetime.now())} | Writing Lemmed Text to a CSV File')
 fieldnames = [t for i, t in enumerate(data[0])]
 with open(f'{channel_string}_messages_{datetime_string}_lemm.csv', 'w', encoding='utf-8-sig', newline='') as csvlemmfile:
 	writer = csv.DictWriter(csvlemmfile, delimiter=';', fieldnames=fieldnames)
 	writer.writeheader()
 	for row in data:
 		writer.writerow(row)
-print(f'{str(datetime.now())} | CSV-файл с леммированным текстом создан!')
+print(f'{str(datetime.now())} | Lemmed text CSV file created!')
 
-# копирование коллекции для А/В-тестирования
+# copying a collection for A/B testing
 def CopyFromColl1ToColl2(database1, collection1, database2, collection2):
     db1 = MongoClient('mongodb://127.0.0.1:27017')[database1][collection1]
     db2 = MongoClient('mongodb://127.0.0.1:27017')[database2][collection2]
@@ -207,16 +207,16 @@ def CopyFromColl1ToColl2(database1, collection1, database2, collection2):
     for a in db1.find():
         try:
             db2.insert_one(a)
-            print(f'{str(datetime.now())} | Запись успешно скопирована', end='\r')
+            print(f'{str(datetime.now())} | Entry copied successfully', end='\r')
         except:
-            print(f'{str(datetime.now())} | Копирование не удалось')
+            print(f'{str(datetime.now())} | Copy failed')
 
-print(f'{str(datetime.now())} | Копирование коллекции для А/В-тестирования')
+print(f'{str(datetime.now())} | Copying a Collection for A/B Testing')
 CopyFromColl1ToColl2('KM5_BigData', f'{channel_string}_{datetime_string}', 'KM5_BigData', f'{channel_string}_{datetime_string}_AB')
-print(f'{str(datetime.now())} | Копирование коллекции для А/В-тестирования завершено!')
+print(f'{str(datetime.now())} | Copying the collection for A/B testing is complete!')
 
-# подготовка коллекции к A/B-тестированию
-print(f'{str(datetime.now())} | Подготовка коллекции к A/B-тестированию')
+# preparing the collection for A/B testing
+print(f'{str(datetime.now())} | Preparing a Collection for A/B Testing')
 db_for_AB = MongoClient('mongodb://127.0.0.1:27017')['KM5_BigData'][f'{channel_string}_{datetime_string}_AB']
 db_for_AB_len = db_for_AB.estimated_document_count()
 db_for_AB_len_A = ceil(db_for_AB_len * 0.75)
@@ -237,7 +237,7 @@ while (db_for_AB_docs_A < db_for_AB_len_A):
 	db_for_AB_docs_B = db_for_AB.count_documents({'flag': 'B'})
 #print(ceil(db_for_AB_len * 0.75), '!=', db_for_AB_docs_A)
 #print(db_for_AB_len - db_for_AB_len_A, '!=', db_for_AB_docs_B)
-print(f'{str(datetime.now())} | Подготовка коллекции к A/B-тестированию завершена!')
+print(f'{str(datetime.now())} | Collection preparation for A/B testing completed!')
 
 cursor = db_for_AB.find({})
 df = pd.DataFrame(list(cursor))
@@ -253,4 +253,4 @@ for row in reader:
     jsonfile.write(',')
 jsonfile.write(']')
 
-input('Для закрытия нажмите Enter')
+input('Press Enter to close')
